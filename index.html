@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rotational Motion – Force Sensor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 30px;
+        }
+        .container {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 30px;
+            max-width: 900px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 6px;
+            font-size: 1.5rem;
+        }
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 24px;
+            font-size: 0.9rem;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto 24px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fff;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .input-group label {
+            font-weight: 600;
+            color: #34495e;
+            margin-bottom: 6px;
+            font-size: 0.95rem;
+        }
+        .input-group input {
+            width: 120px;
+            padding: 8px 12px;
+            border: 2px solid #3498db;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            text-align: center;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input-group input:focus {
+            border-color: #2980b9;
+            box-shadow: 0 0 0 3px rgba(52,152,219,0.2);
+        }
+        .output-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .output-group label {
+            font-weight: 600;
+            color: #34495e;
+            margin-bottom: 6px;
+            font-size: 0.95rem;
+        }
+        .output-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #e74c3c;
+            background: #fdf2f2;
+            border: 2px solid #e74c3c;
+            border-radius: 6px;
+            padding: 8px 18px;
+            min-width: 120px;
+            text-align: center;
+        }
+        .params {
+            margin-top: 18px;
+            text-align: center;
+            color: #95a5a6;
+            font-size: 0.82rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Rotational Motion – Torque Equilibrium</h1>
+    <p class="subtitle">Change the mass M to see how the force sensor reading updates</p>
+
+    <canvas id="diagram" width="820" height="500"></canvas>
+
+    <div class="controls">
+        <div class="input-group">
+            <label for="massInput">Mass M (kg)</label>
+            <input type="number" id="massInput" value="1.0" min="0" step="0.1">
+        </div>
+        <div class="output-group">
+            <label>Force Sensor (N)</label>
+            <div class="output-value" id="forceOutput">—</div>
+        </div>
+    </div>
+
+    <p class="params">
+        Fixed parameters: h = 0.40 m, x = 0.10 m, L = 0.50 m, g = 9.81 m/s²
+    </p>
+</div>
+
+<script>
+// ============================================================
+//  FIXED PARAMETERS  (edit here to change the geometry)
+// ============================================================
+const H = 0.40;   // height of pulley above beam (m)
+const X = 0.10;   // horizontal distance from post to string attachment on beam (m)
+const L = 0.50;   // length of beam from post to mass M (m)
+const G = 9.81;   // gravitational acceleration (m/s²)
+
+// ============================================================
+//  FORCE CALCULATION  –  edit this function freely
+// ============================================================
+/**
+ * Calculates the force measured by the force sensor.
+ *
+ * Physics: static torque equilibrium about the pivot (post base).
+ *   Torque from M:       τ_M  = M * g * L          (weight at end of beam)
+ *   String from pulley to attachment point on beam makes angle θ
+ *   with the vertical:   tan(θ) = x / h
+ *   The string tension T acts along the string; its horizontal
+ *   component at the attachment point is  T·sin(θ) and the
+ *   perpendicular-to-beam component providing torque is T·sin(θ)
+ *   (beam is horizontal, so horizontal force is perpendicular to beam).
+ *
+ *   Wait — let's think more carefully.
+ *   The string goes from the force sensor (at the bottom of the post)
+ *   upward to the pulley (top of the post at height h above the beam),
+ *   then back down at an angle to the attachment point on the beam at
+ *   distance x from the post.
+ *
+ *   At the attachment point the string pulls along the direction from
+ *   the attachment toward the pulley. That direction has:
+ *     horizontal component (toward post): x
+ *     vertical component (upward):        h
+ *     length:  d = sqrt(x² + h²)
+ *
+ *   So the tension T in the string (same throughout, frictionless pulley)
+ *   exerts on the beam at distance x from the pivot:
+ *     Vertical component (upward):    T_v = T · h / d
+ *     Horizontal component (toward post): T_h = T · x / d
+ *
+ *   Torque about the pivot from the string (beam is horizontal):
+ *     Only the vertical component of the string force at distance x
+ *     contributes torque:  τ_string = T_v · x = T · (h / d) · x
+ *     (The horizontal component acts along the beam through distance x
+ *      but its torque arm is zero because the beam is along that line…
+ *      actually the horizontal component is perpendicular to the vertical
+ *      post but along the beam, so its moment arm about the post base
+ *      pivot is the vertical distance = 0 if force is at beam level.)
+ *
+ *   Equilibrium:  T · (h · x / d) = M · g · L
+ *   Therefore:    T = (M · g · L · d) / (h · x)
+ *   where d = sqrt(x² + h²)
+ *
+ *   The force sensor reads T (the tension in the string).
+ *
+ * @param {number} mass – mass M in kg
+ * @returns {number} force sensor reading in Newtons
+ */
+function calculateForce(mass) {
+    const d = Math.sqrt(X * X + H * H);           // string length pulley→beam
+    const tension = (mass * G * L * d) / (H * X);  // equilibrium
+    return tension;
+}
+
+// ============================================================
+//  DRAWING
+// ============================================================
+const canvas = document.getElementById('diagram');
+const ctx = canvas.getContext('2d');
+const massInput = document.getElementById('massInput');
+const forceOutput = document.getElementById('forceOutput');
+
+// Coordinate mapping: real → canvas
+// We'll place the post base at canvas (120, 400) and scale 600px = 0.6 m
+const SCALE = 900;   // pixels per metre
+const ORIGIN_X = 120;
+const ORIGIN_Y = 400; // beam level
+
+function toCanvas(rx, ry) {
+    return [ORIGIN_X + rx * SCALE, ORIGIN_Y - ry * SCALE];
+}
+
+function drawArrowLine(x1, y1, x2, y2, color, headLen = 10) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const angle = Math.atan2(dy, dx);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // arrowhead
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
+    ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+}
+
+function drawDimensionArrow(x1, y1, x2, y2, label, color, offset) {
+    // double-headed arrow with label
+    const mx = (x1 + x2) / 2 + (offset ? offset[0] : 0);
+    const my = (y1 + y2) / 2 + (offset ? offset[1] : 0);
+    drawArrowLine(x1, y1, x2, y2, color);
+    drawArrowLine(x2, y2, x1, y1, color);
+    ctx.fillStyle = color;
+    ctx.font = 'italic 16px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, mx, my);
+}
+
+function draw(mass) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Key points in real coords (m)
+    const postBase = [0, 0];
+    const postTop = [0, H];
+    const pulley = [0, H];
+    const beamEnd = [L, 0];
+    const attachment = [X, 0];
+    const sensorPos = [0, -0.06]; // just below post base
+
+    // Canvas coords
+    const cPostBase = toCanvas(...postBase);
+    const cPostTop = toCanvas(...postTop);
+    const cPulley = toCanvas(...pulley);
+    const cBeamEnd = toCanvas(...beamEnd);
+    const cAttach = toCanvas(...attachment);
+    const cSensor = [cPostBase[0], cPostBase[1] + 55];
+
+    // --- Post (vertical dark blue bar) ---
+    ctx.fillStyle = '#2c3e50';
+    ctx.fillRect(cPostBase[0] - 6, cPostTop[1], 12, cPostBase[1] - cPostTop[1] + 60);
+
+    // --- Beam (horizontal dark blue bar) ---
+    ctx.fillStyle = '#34627c';
+    ctx.fillRect(cPostBase[0] - 2, cPostBase[1] - 8, cBeamEnd[0] - cPostBase[0] + 4, 16);
+
+    // --- Pulley circle ---
+    ctx.beginPath();
+    ctx.arc(cPulley[0], cPulley[1], 14, 0, Math.PI * 2);
+    ctx.fillStyle = '#2c3e50';
+    ctx.fill();
+
+    // --- String: sensor → pulley (vertical) → attachment ---
+    ctx.beginPath();
+    ctx.moveTo(cSensor[0] - 15, cSensor[1]);
+    ctx.lineTo(cPulley[0] - 15, cPulley[1]);
+    ctx.strokeStyle = '#e74c3c';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(cPulley[0] + 10, cPulley[1]);
+    ctx.lineTo(cAttach[0], cAttach[1] - 8);
+    ctx.strokeStyle = '#e74c3c';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // --- String from beam end down to mass ---
+    const massBoxTop = cBeamEnd[1] + 8;
+    ctx.beginPath();
+    ctx.moveTo(cBeamEnd[0], cBeamEnd[1] + 8);
+    ctx.lineTo(cBeamEnd[0], massBoxTop + 15);
+    ctx.strokeStyle = '#e74c3c';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // --- Mass box ---
+    const boxSize = 48;
+    const bx = cBeamEnd[0] - boxSize / 2;
+    const by = massBoxTop + 15;
+    ctx.strokeStyle = '#222';
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(bx, by, boxSize, boxSize);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(bx + 1, by + 1, boxSize - 2, boxSize - 2);
+    ctx.fillStyle = '#222';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('M', cBeamEnd[0], by + boxSize / 2);
+
+    // --- Force sensor box ---
+    const sw = 52, sh = 60;
+    ctx.strokeStyle = '#222';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cSensor[0] - sw / 2 - 12, cSensor[1] - 5, sw, sh);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(cSensor[0] - sw / 2 - 12 + 1, cSensor[1] - 4, sw - 2, sh - 2);
+    ctx.fillStyle = '#222';
+    ctx.font = '13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Force', cSensor[0] - 12, cSensor[1] + 20);
+    ctx.fillText('Sensor', cSensor[0] - 12, cSensor[1] + 36);
+
+    // --- Dimension arrows ---
+    const dimColor = '#555';
+
+    // h  (vertical, left side)
+    const hx = cPostBase[0] - 40;
+    drawDimensionArrow(hx, cPostBase[1], hx, cPostTop[1], 'h', dimColor, [-16, 0]);
+
+    // x  (horizontal, at beam level – above beam)
+    const xy = cPostBase[1] - 28;
+    drawDimensionArrow(cPostBase[0] + 6, xy, cAttach[0], xy, 'x', dimColor, [0, -14]);
+
+    // L  (horizontal, below beam)
+    const ly = cPostBase[1] + 30;
+    drawDimensionArrow(cPostBase[0] + 6, ly, cBeamEnd[0], ly, 'L', dimColor, [0, -14]);
+
+    // --- Labels for current mass value ---
+    ctx.fillStyle = '#2980b9';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`M = ${mass.toFixed(2)} kg`, cBeamEnd[0] + 35, by + boxSize / 2);
+}
+
+function update() {
+    const mass = parseFloat(massInput.value) || 0;
+    const force = calculateForce(mass);
+    forceOutput.textContent = force.toFixed(2) + ' N';
+    draw(mass);
+}
+
+massInput.addEventListener('input', update);
+update();
+</script>
+</body>
+</html>
