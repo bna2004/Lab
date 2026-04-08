@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poiseuille's Law — Interactive Experiment</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#f4f5f7;--bg2:#ffffff;--bg3:#e8eaed;
+  --text:#1a1c22;--muted:#6b7280;--dim:#d1d5db;
+  --blue:#2563eb;--blue-dim:rgba(37,99,235,0.1);
+  --coral:#dc2626;--coral-dim:rgba(220,38,38,0.08);
+  --teal:#0d9488;--teal-dim:rgba(13,148,136,0.1);
+  --amber:#d97706;
+  --water-top:rgba(37,99,235,0.12);--water-bot:rgba(37,99,235,0.38);
+  --font-mono:'JetBrains Mono',monospace;
+  --font-body:'DM Sans',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px}
+h1{font-size:22px;font-weight:600;letter-spacing:-0.5px;margin-bottom:4px;text-align:center}
+.subtitle{font-size:13px;color:var(--muted);margin-bottom:28px;text-align:center;font-family:var(--font-mono);letter-spacing:0.5px}
+.main-container{display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap;justify-content:center;max-width:960px;width:100%}
+.apparatus{position:relative;width:420px;height:480px;background:var(--bg2);border-radius:16px;border:1px solid rgba(0,0,0,0.08);overflow:hidden}
+.controls-panel{display:flex;flex-direction:column;gap:16px;width:280px}
+.card{background:var(--bg2);border-radius:14px;border:1px solid rgba(0,0,0,0.08);padding:20px}
+.card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:14px}
+.stopwatch-wrap{display:flex;align-items:baseline;justify-content:center}
+.stopwatch{font-family:var(--font-mono);font-size:42px;font-weight:600;color:var(--blue);letter-spacing:2px;line-height:1}
+.stopwatch-ms{font-family:var(--font-mono);font-size:18px;color:rgba(37,99,235,0.5)}
+.reading{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.06)}
+.reading:last-child{border-bottom:none}
+.reading-label{font-size:13px;color:var(--muted)}
+.reading-value{font-family:var(--font-mono);font-size:15px;font-weight:600}
+.reading-value.blue{color:var(--blue)}
+.reading-value.coral{color:var(--coral)}
+.reading-value.teal{color:var(--teal)}
+.reading-value.amber{color:var(--amber)}
+
+/* Radius slider */
+.slider-group{margin-top:4px}
+.slider-group label{display:flex;justify-content:space-between;font-size:20px;color:var(--muted);margin-bottom:10px}
+.slider-group label span{font-family:var(--font-mono);font-weight:600;color:var(--blue)}
+input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:3px;background:var(--bg);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--blue);cursor:pointer;border:3px solid var(--bg2);transition:transform 0.15s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+
+/* Tube size visual */
+.tube-preview{display:flex;align-items:center;gap:10px;margin-top:12px}
+.tube-cross{width:40px;height:40px;border-radius:50%;border:2px solid var(--dim);display:flex;align-items:center;justify-content:center;transition:all 0.3s}
+.tube-inner{border-radius:50%;background:var(--blue);opacity:0.35;transition:all 0.3s}
+.tube-label{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+
+/* Button */
+.btn{width:100%;padding:14px;border:none;border-radius:10px;font-family:var(--font-body);font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px}
+.btn-start{background:var(--teal);color:#ffffff}
+.btn-start:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn-start:active{transform:translateY(0)}
+.btn-stop{background:var(--coral);color:#fff}
+.btn-stop:hover{filter:brightness(1.1)}
+.btn:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+
+/* Equation bar */
+.equation-bar{width:100%;max-width:960px;margin-top:24px;padding:14px 20px;background:var(--bg2);border-radius:12px;border:1px solid rgba(0,0,0,0.08);font-family:var(--font-mono);font-size:13px;color:var(--muted);text-align:center;letter-spacing:0.5px}
+.equation-bar em{font-style:normal;color:var(--text)}
+
+/* SVG animations */
+@keyframes drip{0%{opacity:0;transform:translateY(0)}30%{opacity:0.6}100%{opacity:0;transform:translateY(18px)}}
+.drip{animation:drip 0.6s ease-in infinite}
+@keyframes convect{to{stroke-dashoffset:-20}}
+.convection{stroke-dasharray:5 5;animation:convect 1.8s linear infinite}
+
+</style>
+</head>
+<body>
+
+<h1>Poiseuille's law experiment</h1>
+
+
+<div class="main-container">
+  <!-- SVG Apparatus -->
+  <div class="apparatus" id="apparatus">
+
+    <svg width="100%" height="100%" viewBox="0 0 420 480">
+      <defs>
+        <linearGradient id="wg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#2563eb" stop-opacity="0.08"/>
+          <stop offset="100%" stop-color="#2563eb" stop-opacity="0.35"/>
+        </linearGradient>
+        <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#2563eb" stop-opacity="0.1"/>
+          <stop offset="100%" stop-color="#2563eb" stop-opacity="0.4"/>
+        </linearGradient>
+        <clipPath id="cylClip"><rect x="270" y="260" width="52" height="145" rx="3"/></clipPath>
+        <clipPath id="resClip"><rect x="82" y="38" width="76" height="100" rx="5"/></clipPath>
+      </defs>
+
+      <!-- h and rho labels -->
+      <text x="410" y="22" text-anchor="end" font-size="15" fill="#6b7280" font-family="'JetBrains Mono',monospace">h = <tspan fill="#dc2626" font-weight="600">0.25 m</tspan></text>
+      <text x="410" y="42" text-anchor="end" font-size="15" fill="#6b7280" font-family="'JetBrains Mono',monospace">ρ = <tspan fill="#dc2626" font-weight="600">1000 kg/m³</tspan></text>
+      <text x="410" y="62" text-anchor="end" font-size="15" fill="#6b7280" font-family="'JetBrains Mono',monospace">L = <tspan fill="#dc2626" font-weight="600">1 m</tspan></text>
+
+
+      <!-- Ring stand -->
+      <rect x="55" y="24" width="5" height="430" rx="2" fill="#1a1c22" opacity=".18"/>
+      <rect x="30" y="450" width="55" height="6" rx="3" fill="#1a1c22" opacity=".15"/>
+      <!-- Clamp arm -->
+      <rect x="58" y="48" width="38" height="4" rx="2" fill="#1a1c22" opacity=".22"/>
+
+      <!-- Reservoir -->
+      <rect x="80" y="32" width="80" height="110" rx="6" fill="none" stroke="#1a1c22" stroke-width="1" opacity=".2"/>
+      <!-- Water in reservoir -->
+      <g clip-path="url(#resClip)">
+        <rect id="resWater" x="82" y="50" width="76" height="88" fill="url(#wg)"/>
+      </g>
+      <line x1="82" y1="50" x2="158" y2="50" stroke="#2563eb" stroke-width="0.6" opacity=".4" id="resLine"/>
+      <!-- Reservoir label -->
+      <text x="120" y="26" text-anchor="middle" font-size="10" fill="#6b7280" font-family="'JetBrains Mono',monospace">RESERVOIR</text>
+
+      <!-- Height arrow -->
+      <line x1="34" y1="50" x2="34" y2="260" stroke="#dc2626" stroke-width="0.6" stroke-dasharray="3 3" opacity=".6"/>
+      <polygon points="34,50 30,60 38,60" fill="#dc2626" opacity=".6"/>
+      <polygon points="34,260 30,250 38,250" fill="#dc2626" opacity=".6"/>
+      <text x="22" y="155" text-anchor="middle" font-size="15" fill="#dc2626" font-family="'JetBrains Mono',monospace" transform="rotate(-90 22 155)" opacity=".8">h</text>
+
+      <!-- Tubing path -->
+      <path id="tubePath" d="M120 142 L120 230 Q120 250 140 250 L260 250 Q280 250 280 270 L280 260" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" opacity=".25"/>
+      <path d="M120 142 L120 230 Q120 250 140 250 L260 250 Q280 250 280 270 L280 260" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round" opacity=".12"/>
+
+      <!-- Tube label -->
+      <text x="190" y="240" text-anchor="middle" font-size="15" fill="#2563eb" font-family="'JetBrains Mono',monospace" opacity=".9">r = <tspan id="tubeLabelR">2.0</tspan> mm</text>
+
+      <!-- Convection lines (visible when running) -->
+      <g id="convLines" opacity="0">
+        <path class="convection" fill="none" stroke="#2563eb" stroke-width="0.6" opacity=".4" d="M280 335 C282 315,288 295,284 275"/>
+        <path class="convection" fill="none" stroke="#2563eb" stroke-width="0.5" opacity=".3" d="M296 340 C298 320,302 300,298 280" style="animation-duration:2.2s"/>
+      </g>
+
+      <!-- Drip (visible when running) -->
+      <g id="dripGroup" opacity="0">
+        <ellipse cx="280" cy="262" rx="3" ry="4" fill="#2563eb" opacity=".5" class="drip"/>
+      </g>
+
+      <!-- Graduated cylinder -->
+      <rect x="268" y="258" width="56" height="150" rx="4" fill="none" stroke="#1a1c22" stroke-width="1" opacity=".2"/>
+      <!-- Graduation marks -->
+      <g font-size="8" fill="#6b7280" font-family="'JetBrains Mono',monospace" opacity=".7">
+        <line x1="322" y1="278" x2="326" y2="278" stroke="#6b7280" stroke-width="0.5"/>
+        <text x="330" y="281">50</text>
+        <line x1="322" y1="298" x2="326" y2="298" stroke="#6b7280" stroke-width="0.5"/>
+        <text x="330" y="301">40</text>
+        <line x1="322" y1="318" x2="326" y2="318" stroke="#6b7280" stroke-width="0.5"/>
+        <text x="330" y="321">30</text>
+        <line x1="322" y1="338" x2="326" y2="338" stroke="#6b7280" stroke-width="0.5"/>
+        <text x="330" y="341">20</text>
+        <line x1="322" y1="358" x2="326" y2="358" stroke="#6b7280" stroke-width="0.5"/>
+        <text x="330" y="361">10</text>
+        <line x1="322" y1="378" x2="326" y2="378" stroke="#6b7280" stroke-width="0.5"/>
+        <text x="330" y="381">5</text>
+        <line x1="322" y1="398" x2="326" y2="398" stroke="#6b7280" stroke-width="0.5"/>
+        <text x="330" y="401">0</text>
+      </g>
+      <!-- Cylinder label -->
+      <text x="296" y="425" text-anchor="middle" font-size="9" fill="#6b7280" font-family="'JetBrains Mono',monospace">CYLINDER</text>
+
+      <!-- Water fill in cylinder (animated) -->
+      <g clip-path="url(#cylClip)">
+        <rect id="cylWater" x="270" y="400" width="52" height="0" fill="url(#cg)"/>
+      </g>
+
+      <!-- Volume readout on cylinder -->
+      <text id="cylVolText" x="296" y="394" text-anchor="middle" font-size="14" font-weight="600" fill="#2563eb" font-family="'JetBrains Mono',monospace" opacity="0">0.0</text>
+
+      <!-- Table surface -->
+      <rect x="10" y="412" width="400" height="3" rx="1.5" fill="#1a1c22" opacity=".08"/>
+
+    </svg>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls-panel">
+    <!-- Stopwatch card -->
+    <div class="card">
+      <div class="card-title">Stopwatch</div>
+      <div class="stopwatch-wrap">
+        <div class="stopwatch" id="timerDisplay">00:00</div>
+        <div class="stopwatch-ms" id="timerMs">.000</div>
+        <div class="stopwatch" style="color:rgba(37,99,235,0.45);margin-left:4px">s</div>
+      </div>
+    </div>
+
+    <!-- Volume -->
+    <div class="card">
+      <div class="card-title">Volume Collected</div>
+      <div class="stopwatch" style="text-align:center"><span id="volReading" style="display:inline-block;width:5ch;text-align:right">0</span><span style="color:rgba(37,99,235,0.45)"> mL</span></div>
+    </div>
+
+    <!-- Radius control -->
+    <div class="card">
+      <div class="card-title">Tube inner radius</div>
+      <div class="slider-group">
+        <label><span id="radiusVal">0.5 mm</span></label>
+        <input type="range" id="radiusSlider" min="0.5" max="2" step="0.1" value="0.5">
+      </div>
+    </div>
+
+    <!-- Start/Stop button -->
+    <button class="btn btn-start" id="mainBtn" onclick="toggleExperiment()">Start experiment</button>
+  </div>
+</div>
+
+
+
+<script>
+const PARAMS = {
+  rho: 1000,
+  g: 9.8,
+  h: 0.25,
+  eta: 0.001,
+  L: 1,
+  maxVolume: 50,
+  cylTopY: 258,
+  cylBotY: 400,
+  cylHeight: 142,
+};
+
+let running = false;
+let startTime = 0;
+let elapsed = 0;
+let volume = 0;
+let radius = 0.5;
+let animFrame = null;
+
+const $ = id => document.getElementById(id);
+
+const timerDisplay = $('timerDisplay');
+const timerMs = $('timerMs');
+const volReading = $('volReading');
+const radiusVal = $('radiusVal');
+const radiusSlider = $('radiusSlider');
+const mainBtn = $('mainBtn');
+const cylWater = $('cylWater');
+const cylVolText = $('cylVolText');
+const resWater = $('resWater');
+const resLine = $('resLine');
+const dripGroup = $('dripGroup');
+const convLines = $('convLines');
+const tubeLabelR = $('tubeLabelR');
+const tubePath = $('tubePath');
+
+function calcFlowRate(r_mm) {
+  const r = r_mm / 1000;
+  const deltaP = PARAMS.rho * PARAMS.g * PARAMS.h;
+  return (Math.PI * deltaP * Math.pow(r, 4)) / (8 * PARAMS.eta * PARAMS.L)*(Math.random() * (1.02 - 0.98) + 0.98);
+}
+
+function calcFlowRateML(r_mm) {
+  return calcFlowRate(r_mm) * 1e6;
+}
+
+function formatTime(ms) {
+  const totalSec = Math.floor(ms / 1000);
+  const min = String(Math.floor(totalSec / 60)).padStart(2, '0');
+  const sec = String(totalSec % 60).padStart(2, '0');
+  const milli = '.' + String(ms % 1000).padStart(3, '0');
+  return { main: `${min}:${sec}`, ms: milli };
+}
+
+function updateTimer(ms) {
+  const t = formatTime(ms);
+  timerDisplay.textContent = t.main;
+  timerMs.textContent = t.ms;
+}
+
+function updateCylinder(vol) {
+  const frac = Math.min(vol / PARAMS.maxVolume, 1);
+  const h = frac * PARAMS.cylHeight;
+  const y = PARAMS.cylBotY - h;
+  cylWater.setAttribute('y', y);
+  cylWater.setAttribute('height', h);
+  cylVolText.setAttribute('y', y - 6);
+  cylVolText.setAttribute('opacity', vol > 0.1 ? 1 : 0);
+  cylVolText.textContent = parseFloat(vol.toPrecision(3));
+
+  const resFrac = 1 - frac * 0.6;
+  const resH = 88 * resFrac;
+  const resY = 138 - resH;
+  //resWater.setAttribute('y', resY);
+  //resWater.setAttribute('height', resH);
+  //resLine.setAttribute('y1', resY);
+  //resLine.setAttribute('y2', resY);
+}
+
+function updateRadiusVisuals(r) {
+  const sw = 2 + (r / 4) * 6;
+  tubePath.setAttribute('stroke-width', sw);
+  tubeLabelR.textContent = r.toFixed(1);
+  radiusVal.textContent = r.toFixed(1) + ' mm';
+}
+
+radiusSlider.addEventListener('input', function() {
+  radius = parseFloat(this.value);
+  updateRadiusVisuals(radius);
+});
+
+function toggleExperiment() {
+  if (running) {
+    stopExperiment();
+  } else {
+    startExperiment();
+  }
+}
+
+function startExperiment() {
+  running = true;
+  volume = 0;
+  elapsed = 0;
+  updateCylinder(0);
+  updateTimer(0);
+  mainBtn.textContent = 'Stop experiment';
+  mainBtn.className = 'btn btn-stop';
+  radiusSlider.disabled = true;
+  dripGroup.setAttribute('opacity', '1');
+  convLines.setAttribute('opacity', '1');
+  startTime = performance.now();
+  tick();
+}
+
+function stopExperiment() {
+  running = false;
+  cancelAnimationFrame(animFrame);
+  mainBtn.textContent = 'Start experiment';
+  mainBtn.className = 'btn btn-start';
+  radiusSlider.disabled = false;
+  dripGroup.setAttribute('opacity', '0');
+  convLines.setAttribute('opacity', '0');
+
+
+}
+
+
+function tick() {
+  if (!running) return;
+  const now = performance.now();
+  const dt = (now - startTime) - elapsed;
+  elapsed = now - startTime;
+
+  const Q = calcFlowRateML(radius);
+  const dv = Q * (dt / 1000);
+  volume = Math.min(volume + dv, PARAMS.maxVolume);
+
+  updateTimer(Math.floor(elapsed));
+  updateCylinder(volume);
+  volReading.textContent = parseFloat(volume.toPrecision(3));
+
+  if (volume >= PARAMS.maxVolume) {
+    stopExperiment();
+    return;
+  }
+
+  animFrame = requestAnimationFrame(tick);
+}
+
+updateRadiusVisuals(radius);
+updateCylinder(0);
+updateTimer(0);
+</script>
+</body>
+</html>
