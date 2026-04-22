@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circuits Lab</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f4f8;
+    color: #1a1a2e;
+    min-height: 100vh;
+  }
+  h1 {
+    text-align: center;
+    padding: 24px 0 8px;
+    font-size: 1.8rem;
+    color: #1a1a2e;
+    letter-spacing: 1px;
+  }
+
+  /* ---------- layout ---------- */
+  .lab-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    padding: 30px 40px;
+  }
+  .separator {
+    border: none;
+    border-top: 3px dashed #b0b8c8;
+    margin: 0 60px;
+  }
+  .section-label {
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: -18px;
+    margin-top: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  /* ---------- circuit canvas ---------- */
+  .circuit-box {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+    padding: 16px;
+  }
+
+  /* ---------- controls panel ---------- */
+  .controls {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+    padding: 28px 32px;
+    min-width: 260px;
+  }
+  .controls h2 {
+    font-size: 1rem;
+    color: #888;
+    margin-bottom: 18px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+  .control-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .control-row label {
+    font-weight: 600;
+    font-size: 1rem;
+    min-width: 90px;
+  }
+  .control-row select,
+  .control-row input[type="number"] {
+    font-size: 1rem;
+    padding: 6px 10px;
+    border: 2px solid #d0d7e2;
+    border-radius: 8px;
+    width: 100px;
+    text-align: center;
+    background: #f8fafc;
+    transition: border-color 0.2s;
+  }
+  .control-row select:focus,
+  .control-row input[type="number"]:focus {
+    outline: none;
+    border-color: #4a7cff;
+  }
+  .unit {
+    font-size: 0.95rem;
+    color: #888;
+    margin-left: 6px;
+    min-width: 24px;
+  }
+
+  /* ---------- readings ---------- */
+  .readings {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 2px solid #e8ecf2;
+  }
+  .reading-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .reading-row .label {
+    font-weight: 600;
+    font-size: 1.05rem;
+  }
+  .reading-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #c0392b;
+    font-family: 'Courier New', monospace;
+    min-width: 100px;
+    text-align: right;
+  }
+</style>
+</head>
+<body>
+
+<h1>Circuits Laboratory</h1>
+
+<!-- ==================== UPPER CIRCUIT: SERIES ==================== -->
+<p class="section-label">Series Circuit</p>
+<div class="lab-section">
+  <div class="circuit-box">
+    <canvas id="seriesCanvas" width="460" height="320"></canvas>
+  </div>
+  <div class="controls">
+    <h2>Controls</h2>
+    <div class="control-row">
+      <label for="resistorSelect">Resistor:</label>
+      <select id="resistorSelect">
+        <option value="1">1</option>
+        <option value="2">2</option>
+      </select>
+      <span class="unit"></span>
+    </div>
+    <div class="control-row">
+      <label for="seriesVoltage">Battery:</label>
+      <input type="number" id="seriesVoltage" value="2" min="0" max="24" step="0.5">
+      <span class="unit">V</span>
+    </div>
+    <div class="readings">
+      <div class="reading-row">
+        <span class="label">Voltmeter:</span>
+        <span class="reading-value" id="seriesVoltmeter">2 V</span>
+      </div>
+      <div class="reading-row">
+        <span class="label">Ammeter:</span>
+        <span class="reading-value" id="seriesAmmeter">3 mA</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="separator">
+
+<!-- ==================== LOWER CIRCUIT: PARALLEL ==================== -->
+<p class="section-label">Parallel Circuit</p>
+<div class="lab-section">
+  <div class="circuit-box">
+    <canvas id="parallelCanvas" width="460" height="360"></canvas>
+  </div>
+  <div class="controls">
+    <h2>Controls</h2>
+    <div class="control-row">
+      <label for="parallelVoltage">Battery:</label>
+      <input type="number" id="parallelVoltage" value="2" min="0" max="24" step="0.5">
+      <span class="unit">V</span>
+    </div>
+    <div class="readings">
+      <div class="reading-row">
+        <span class="label">Voltmeter:</span>
+        <span class="reading-value" id="parallelVoltmeter">2 V</span>
+      </div>
+      <div class="reading-row">
+        <span class="label">Ammeter:</span>
+        <span class="reading-value" id="parallelAmmeter">5 mA</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  CONSTANTS — resistance values in Ohms
+// ============================================================
+const R1 = 650;   // Resistor 1: ~667 Ω
+const R2 = 1400;  // Resistor 2: 1000 Ω
+
+// ============================================================
+//  READING FUNCTION — calculates voltmeter & ammeter readings
+//  This single function controls all instrument readings.
+// ============================================================
+function calculateReadings(circuitType, voltage, selectedResistor) {
+  let ammeter = 0;   // in Amps
+  let voltmeter = 0; // in Volts
+
+  if (circuitType === 'series') {
+    // Series circuit: one resistor at a time
+    const R = (selectedResistor === 1) ? R1 : R2;
+    ammeter = voltage / R *(Math.random() * (1.02 - 0.98) + 0.98);          // I = V / R, 2% noise added
+    voltmeter = voltage;            // voltmeter across the resistor = battery voltage (ideal)
+  }
+  else if (circuitType === 'parallel') {
+    // Parallel circuit: both resistors in parallel
+    const Rparallel = (R1 * R2) / (R1 + R2);
+    ammeter = voltage / Rparallel *(Math.random() * (1.02 - 0.98) + 0.98) ;  // total current, 2% noise added
+    voltmeter = voltage;            // voltmeter across parallel combo = battery voltage
+  }
+
+  return { ammeter, voltmeter };
+}
+
+// ============================================================
+//  FORMAT helpers
+// ============================================================
+function formatCurrent(amps) {
+  if (amps === 0) return '0 mA';
+  if (amps < 0.001) return (amps * 1e6).toFixed(2) + ' μA';
+  if (amps < 1)     return (amps * 1e3).toFixed(2) + ' mA';
+  return amps.toFixed(2) + ' A';
+}
+function formatVoltage(v) {
+  return v.toFixed(2) + ' V';
+}
+
+// ============================================================
+//  UPDATE UI
+// ============================================================
+function updateSeries() {
+  const voltage = parseFloat(document.getElementById('seriesVoltage').value) || 0;
+  const sel = parseInt(document.getElementById('resistorSelect').value);
+  const { ammeter, voltmeter } = calculateReadings('series', voltage, sel);
+
+  document.getElementById('seriesVoltmeter').textContent = formatVoltage(voltmeter);
+  document.getElementById('seriesAmmeter').textContent   = formatCurrent(ammeter);
+
+  drawSeriesCircuit(voltage, sel, voltmeter, ammeter);
+}
+
+function updateParallel() {
+  const voltage = parseFloat(document.getElementById('parallelVoltage').value) || 0;
+  const { ammeter, voltmeter } = calculateReadings('parallel', voltage, null);
+
+  document.getElementById('parallelVoltmeter').textContent = formatVoltage(voltmeter);
+  document.getElementById('parallelAmmeter').textContent   = formatCurrent(ammeter);
+
+  drawParallelCircuit(voltage, voltmeter, ammeter);
+}
+
+// ============================================================
+//  DRAWING HELPERS
+// ============================================================
+const WIRE  = '#c0392b';
+const COMP  = '#c0392b';
+const TEXT_C = '#c0392b';
+const LW = 2.5;
+
+function drawWire(ctx, x1, y1, x2, y2) {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.strokeStyle = WIRE;
+  ctx.lineWidth = LW;
+  ctx.stroke();
+}
+
+function drawResistor(ctx, x, y, w) {
+  // Zigzag resistor symbol, centred at (x + w/2, y)
+  const teeth = 6;
+  const amp = 10;
+  const step = w / teeth;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  for (let i = 0; i < teeth; i++) {
+    const nx = x + step * (i + 0.5);
+    const ny = y + ((i % 2 === 0) ? -amp : amp);
+    ctx.lineTo(nx, ny);
+  }
+  ctx.lineTo(x + w, y);
+  ctx.strokeStyle = COMP;
+  ctx.lineWidth = LW;
+  ctx.stroke();
+}
+
+function drawBattery(ctx, x, y) {
+  // Vertical battery: long line (positive) and short line (negative)
+  const gap = 6;
+  ctx.strokeStyle = COMP;
+  ctx.lineWidth = LW;
+  // Long plate (positive)
+  ctx.beginPath();
+  ctx.moveTo(x - 14, y - gap);
+  ctx.lineTo(x + 14, y - gap);
+  ctx.stroke();
+  // Short plate (negative)
+  ctx.beginPath();
+  ctx.moveTo(x - 7, y + gap);
+  ctx.lineTo(x + 7, y + gap);
+  ctx.lineWidth = 3.5;
+  ctx.stroke();
+  ctx.lineWidth = LW;
+}
+
+function drawMeter(ctx, cx, cy, letter) {
+  ctx.beginPath();
+  ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+  ctx.strokeStyle = COMP;
+  ctx.lineWidth = LW;
+  ctx.stroke();
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+  ctx.strokeStyle = COMP;
+  ctx.lineWidth = LW;
+  ctx.stroke();
+  ctx.fillStyle = COMP;
+  ctx.font = 'bold 18px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(letter, cx, cy);
+}
+
+function drawLabel(ctx, x, y, text) {
+  ctx.fillStyle = TEXT_C;
+  ctx.font = '13px "Segoe UI", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y);
+}
+
+// ============================================================
+//  DRAW SERIES CIRCUIT
+// ============================================================
+function drawSeriesCircuit(voltage, selR, voltReading, ampReading) {
+  const c = document.getElementById('seriesCanvas');
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, c.width, c.height);
+
+  // Layout coordinates
+  const left = 50, right = 410, top_ = 70, bot = 260;
+  const midX = (left + right) / 2;
+
+  // Bottom wire
+  drawWire(ctx, left, bot, right, bot);
+
+  // Left vertical wire (up from bottom-left to ammeter)
+  drawWire(ctx, left, bot, left, top_);
+
+  // Ammeter on top-left
+  const amX = left + 50;
+  drawWire(ctx, left, top_, amX - 18, top_);
+  drawMeter(ctx, amX, top_, 'A');
+  drawWire(ctx, amX + 18, top_, amX + 50, top_);
+
+  // Resistor on top
+  const resStart = amX + 50;
+  const resEnd = resStart + 100;
+  drawResistor(ctx, resStart, top_, 100);
+  drawLabel(ctx, resStart + 50, top_ - 22, 'R' + selR);
+
+  // Wire from resistor to top-right corner
+  drawWire(ctx, resEnd, top_, right, top_);
+
+  // Right vertical wire (down to battery area)
+  drawWire(ctx, right, top_, right, bot);
+
+  // Battery on the bottom wire
+  const batX = midX;
+  // Break bottom wire for battery
+  ctx.clearRect(batX - 18, bot - 16, 36, 32);
+  drawWire(ctx, left, bot, batX - 16, bot);
+  drawWire(ctx, batX + 16, bot, right, bot);
+  // Draw battery vertically rotated → draw horizontal
+  // Actually let's draw it inline on the bottom wire
+  ctx.strokeStyle = COMP;
+  ctx.lineWidth = LW;
+  // Long plate
+  ctx.beginPath();
+  ctx.moveTo(batX - 6, bot - 14);
+  ctx.lineTo(batX - 6, bot + 14);
+  ctx.stroke();
+  // Short plate
+  ctx.beginPath();
+  ctx.moveTo(batX + 6, bot - 8);
+  ctx.lineTo(batX + 6, bot + 8);
+  ctx.lineWidth = 3.5;
+  ctx.stroke();
+  ctx.lineWidth = LW;
+  // + and - labels
+  ctx.fillStyle = COMP;
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('+', batX - 16, bot + 26);
+  ctx.fillText('−', batX + 16, bot + 26);
+
+  // Voltmeter across resistor (parallel path above)
+  const vMidX = resStart + 50;
+  const vY = top_ + 80;
+  // Wires down from resistor ends to voltmeter row
+  drawWire(ctx, resStart, top_, resStart, vY);
+  drawWire(ctx, resEnd, top_, resEnd, vY);
+  // Horizontal wires to voltmeter
+  drawWire(ctx, resStart, vY, vMidX - 18, vY);
+  drawWire(ctx, vMidX + 18, vY, resEnd, vY);
+  drawMeter(ctx, vMidX, vY, 'V');
+}
+
+// ============================================================
+//  DRAW PARALLEL CIRCUIT
+// ============================================================
+function drawParallelCircuit(voltage, voltReading, ampReading) {
+  const c = document.getElementById('parallelCanvas');
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, c.width, c.height);
+
+  const left = 50, right = 410, top_ = 60, bot = 310;
+  const midX = (left + right) / 2;
+
+  // Main bus positions
+  const busLeft = 150;
+  const busRight = 310;
+  const r1Y = top_ + 60;
+  const r2Y = top_ + 130;
+
+  // Bottom wire
+  drawWire(ctx, left, bot, right, bot);
+
+  // Left vertical wire
+  drawWire(ctx, left, bot, left, top_);
+
+  // Top wire from left to ammeter
+  const amX = left + 50;
+  drawWire(ctx, left, top_, amX - 18, top_);
+  drawMeter(ctx, amX, top_, 'A');
+  drawWire(ctx, amX + 18, top_, busLeft, top_);
+
+  // Left bus (vertical) connecting to both resistors
+  drawWire(ctx, busLeft, top_, busLeft, r2Y);
+
+  // Right bus (vertical) connecting from both resistors
+  drawWire(ctx, busRight, top_, busRight, r2Y);
+
+  // Top wire from right bus to top-right corner
+  drawWire(ctx, busRight, top_, right, top_);
+
+  // Right vertical wire down
+  drawWire(ctx, right, top_, right, bot);
+
+  // Resistor 1 (upper branch)
+  drawWire(ctx, busLeft, r1Y, busLeft + 20, r1Y);
+  drawResistor(ctx, busLeft + 20, r1Y, 100);
+  drawWire(ctx, busLeft + 120, r1Y, busRight, r1Y);
+  drawLabel(ctx, busLeft + 70, r1Y - 18, 'R1');
+
+  // Resistor 2 (lower branch)
+  drawWire(ctx, busLeft, r2Y, busLeft + 20, r2Y);
+  drawResistor(ctx, busLeft + 20, r2Y, 100);
+  drawWire(ctx, busLeft + 120, r2Y, busRight, r2Y);
+  drawLabel(ctx, busLeft + 70, r2Y - 18, 'R2');
+
+  // Voltmeter across the parallel combination (below R2)
+  const vY = r2Y + 70;
+  const vMidX = (busLeft + busRight) / 2;
+  drawWire(ctx, busLeft, r2Y, busLeft, vY);
+  drawWire(ctx, busRight, r2Y, busRight, vY);
+  drawWire(ctx, busLeft, vY, vMidX - 18, vY);
+  drawWire(ctx, vMidX + 18, vY, busRight, vY);
+  drawMeter(ctx, vMidX, vY, 'V');
+
+  // Battery on the bottom wire
+  const batX = midX;
+  ctx.clearRect(batX - 18, bot - 16, 36, 32);
+  drawWire(ctx, left, bot, batX - 16, bot);
+  drawWire(ctx, batX + 16, bot, right, bot);
+  ctx.strokeStyle = COMP;
+  ctx.lineWidth = LW;
+  ctx.beginPath();
+  ctx.moveTo(batX - 6, bot - 14);
+  ctx.lineTo(batX - 6, bot + 14);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(batX + 6, bot - 8);
+  ctx.lineTo(batX + 6, bot + 8);
+  ctx.lineWidth = 3.5;
+  ctx.stroke();
+  ctx.lineWidth = LW;
+  ctx.fillStyle = COMP;
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('+', batX - 16, bot + 26);
+  ctx.fillText('−', batX + 16, bot + 26);
+}
+
+// ============================================================
+//  EVENT LISTENERS
+// ============================================================
+document.getElementById('resistorSelect').addEventListener('change', updateSeries);
+document.getElementById('seriesVoltage').addEventListener('input', updateSeries);
+document.getElementById('parallelVoltage').addEventListener('input', updateParallel);
+
+// Initial draw
+updateSeries();
+updateParallel();
+</script>
+
+</body>
+</html>
